@@ -158,6 +158,8 @@ def random_input_data():
 
     return _source_files
 
+def get_optimal_dict_size_heuristically(src):
+    return sum(len(ch) for ch in src) // 100
 
 def generate_samples():
     inputs = [

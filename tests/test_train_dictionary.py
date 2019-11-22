@@ -6,6 +6,7 @@ import zstandard as zstd
 
 from .common import (
     generate_samples,
+    get_optimal_dict_size_heuristically,
     make_cffi,
     random_input_data,
 )
@@ -40,7 +41,8 @@ class TestTrainDictionary(unittest.TestCase):
         self.assertEqual(data[0:8], expected)
 
     def test_basic(self):
-        d = zstd.train_dictionary(8192, generate_samples(), k=64, d=16)
+        samples = generate_samples()
+        d = zstd.train_dictionary(get_optimal_dict_size_heuristically(samples), samples, k=64, d=8)
         self.assertIsInstance(d.dict_id(), int_type)
 
         data = d.as_bytes()
@@ -50,11 +52,13 @@ class TestTrainDictionary(unittest.TestCase):
         self.assertEqual(d.d, 16)
 
     def test_set_dict_id(self):
-        d = zstd.train_dictionary(8192, generate_samples(), k=64, d=16, dict_id=42)
+        samples = generate_samples()
+        d = zstd.train_dictionary(get_optimal_dict_size_heuristically(samples), samples, k=64, d=8, dict_id=42)
         self.assertEqual(d.dict_id(), 42)
 
     def test_optimize(self):
-        d = zstd.train_dictionary(8192, generate_samples(), threads=-1, steps=1, d=16)
+        samples = generate_samples()
+        d = zstd.train_dictionary(get_optimal_dict_size_heuristically(samples), samples, threads=-1, steps=1, d=8, notifications=2)
 
         # This varies by platform.
         self.assertIn(d.k, (50, 2000))
@@ -68,7 +72,8 @@ class TestCompressionDict(unittest.TestCase):
             zstd.ZstdCompressionDict(b"foo", dict_type=42)
 
     def test_bad_precompute_compress(self):
-        d = zstd.train_dictionary(8192, generate_samples(), k=64, d=16)
+        samples = generate_samples()
+        d = zstd.train_dictionary(get_optimal_dict_size_heuristically(samples), 8192, samples, k=64, d=8)
 
         with self.assertRaisesRegexp(ValueError, "must specify one of level or "):
             d.precompute_compress()

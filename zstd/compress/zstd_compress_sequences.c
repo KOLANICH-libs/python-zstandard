@@ -86,7 +86,7 @@ static size_t ZSTD_entropyCost(unsigned const* count, unsigned const max, size_t
  * Returns the cost in bits of encoding the distribution in count using ctable.
  * Returns an error if ctable cannot represent all the symbols in count.
  */
-static size_t ZSTD_fseBitCost(
+size_t ZSTD_fseBitCost(
     FSE_CTable const* ctable,
     unsigned const* count,
     unsigned const max)
@@ -117,8 +117,8 @@ static size_t ZSTD_fseBitCost(
  * table described by norm. The max symbol support by norm is assumed >= max.
  * norm must be valid for every symbol with non-zero probability in count.
  */
-static size_t ZSTD_crossEntropyCost(short const* norm, unsigned accuracyLog,
-                                    unsigned const* count, unsigned const max)
+size_t ZSTD_crossEntropyCost(short const* norm, unsigned accuracyLog,
+                             unsigned const* count, unsigned const max)
 {
     unsigned const shift = 8 - accuracyLog;
     size_t cost = 0;
@@ -222,7 +222,7 @@ ZSTD_buildCTable(void* dst, size_t dstCapacity,
                 const BYTE* codeTable, size_t nbSeq,
                 const S16* defaultNorm, U32 defaultNormLog, U32 defaultMax,
                 const FSE_CTable* prevCTable, size_t prevCTableSize,
-                void* workspace, size_t workspaceSize)
+                void* entropyWorkspace, size_t entropyWorkspaceSize)
 {
     BYTE* op = (BYTE*)dst;
     const BYTE* const oend = op + dstCapacity;
@@ -238,7 +238,7 @@ ZSTD_buildCTable(void* dst, size_t dstCapacity,
         memcpy(nextCTable, prevCTable, prevCTableSize);
         return 0;
     case set_basic:
-        FORWARD_IF_ERROR(FSE_buildCTable_wksp(nextCTable, defaultNorm, defaultMax, defaultNormLog, workspace, workspaceSize));  /* note : could be pre-calculated */
+        FORWARD_IF_ERROR(FSE_buildCTable_wksp(nextCTable, defaultNorm, defaultMax, defaultNormLog, entropyWorkspace, entropyWorkspaceSize));  /* note : could be pre-calculated */
         return 0;
     case set_compressed: {
         S16 norm[MaxSeq + 1];
@@ -252,7 +252,7 @@ ZSTD_buildCTable(void* dst, size_t dstCapacity,
         FORWARD_IF_ERROR(FSE_normalizeCount(norm, tableLog, count, nbSeq_1, max));
         {   size_t const NCountSize = FSE_writeNCount(op, oend - op, norm, max, tableLog);   /* overflow protected */
             FORWARD_IF_ERROR(NCountSize);
-            FORWARD_IF_ERROR(FSE_buildCTable_wksp(nextCTable, norm, max, tableLog, workspace, workspaceSize));
+            FORWARD_IF_ERROR(FSE_buildCTable_wksp(nextCTable, norm, max, tableLog, entropyWorkspace, entropyWorkspaceSize));
             return NCountSize;
         }
     }
